@@ -24,14 +24,14 @@ function isDark() {
 }
 
 function getThemeColors() {
-  var dark = isDark();
+  var s = getComputedStyle(document.documentElement);
   return {
-    textPrimary: dark ? '#e6edf3' : '#1f2328',
-    textSecondary: dark ? '#8b949e' : '#656d76',
-    splitLine: dark ? '#21262d' : '#e1e4e8',
-    bgLow: dark ? '#161b22' : '#f6f8fa',
-    borderColor: dark ? '#0d1117' : '#ffffff',
-    borderSubtle: dark ? '#30363d' : '#d0d7de'
+    textPrimary:   s.getPropertyValue('--text-primary').trim()   || '#e6edf3',
+    textSecondary: s.getPropertyValue('--text-secondary').trim() || '#8b949e',
+    splitLine:     s.getPropertyValue('--border-subtle').trim()  || '#21262d',
+    bgLow:         s.getPropertyValue('--bg-secondary').trim()   || '#161b22',
+    borderColor:   s.getPropertyValue('--border').trim()         || '#30363d',
+    borderSubtle:  s.getPropertyValue('--border-subtle').trim()  || '#21262d'
   };
 }
 
@@ -42,7 +42,13 @@ function getThemeColors() {
   }
   var btn = document.getElementById('themeToggle');
   if (btn) {
-    btn.textContent = isDark() ? 'Light' : 'Dark';
+    function updateToggleButton() {
+      var dark = isDark();
+      btn.textContent = dark ? 'Light' : 'Dark';
+      btn.setAttribute('aria-pressed', dark ? 'false' : 'true');
+      btn.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
+    }
+    updateToggleButton();
     btn.addEventListener('click', function() {
       var nowLight = isDark();
       document.documentElement.setAttribute('data-theme', nowLight ? 'light' : '');
@@ -51,7 +57,7 @@ function getThemeColors() {
       } else {
         localStorage.removeItem('sust-dashboard-theme');
       }
-      btn.textContent = isDark() ? 'Light' : 'Dark';
+      updateToggleButton();
       themeVersion++;
       updateAllChartsTheme();
     });
@@ -96,17 +102,22 @@ function updateAllChartsTheme() {
         return p;
       });
     }
-    // Update series labels
+    // Update series labels (pie charts unconditionally; others by presence)
     if (opt.series) {
-      patch.series = opt.series.map(function(s) {
-        var p = {};
-        if (s.label && s.label[0] && s.label[0].color) {
-          p.label = { color: tc.textPrimary };
+      opt.series.forEach(function(s, i) {
+        if (s.type === 'pie') {
+          if (!patch.series) patch.series = [];
+          patch.series[i] = {
+            label: { color: tc.textPrimary },
+            emphasis: { label: { color: tc.textPrimary } },
+            labelLine: { lineStyle: { color: tc.textSecondary } }
+          };
+        } else {
+          if (s.itemStyle && s.itemStyle[0] && s.itemStyle[0].borderColor) {
+            if (!patch.series) patch.series = [];
+            patch.series[i] = { itemStyle: { borderColor: tc.borderColor } };
+          }
         }
-        if (s.itemStyle && s.itemStyle[0] && s.itemStyle[0].borderColor) {
-          p.itemStyle = { borderColor: tc.borderColor };
-        }
-        return p;
       });
     }
     inst.setOption(patch);
@@ -515,7 +526,7 @@ if (typeof BACKGROUND_SOURCES !== 'undefined') {
 // === Geographic Coverage Section ===
 if (typeof GEOGRAPHIC_COVERAGE !== 'undefined') {
   const geoCards = document.getElementById('geo-region-cards');
-  const regionColors = { 'CEE': '#d2a8ff', 'SE_Asia': '#f0883e', 'MENA': '#58a6ff' };
+  const regionColors = { 'CEE': 'var(--region-cee)', 'SE_Asia': 'var(--region-sea)', 'MENA': 'var(--region-mena)' };
   const regionLabels = { 'CEE': 'Central & Eastern Europe', 'SE_Asia': 'Southeast Asia', 'MENA': 'Middle East & North Africa' };
 
   Object.entries(GEOGRAPHIC_COVERAGE).forEach(([key, region]) => {
@@ -718,11 +729,12 @@ document.addEventListener('toggle', function(e) {
 // === Mobile responsive chart overrides (WCAG + narrow viewport) ===
 const gwMobileMQ = window.matchMedia('(max-width: 576px)');
 function applyMobileChartOverrides(isMobile) {
+  var tc = getThemeColors();
   // orgChart: org-type y-axis label clipping at narrow viewport
   if (typeof orgChart !== 'undefined' && orgChart && !orgChart.isDisposed()) {
     orgChart.setOption({
       grid: { left: isMobile ? '45%' : '30%', right: '5%', top: '5%', bottom: '5%' },
-      yAxis: { axisLabel: { color: '#e6edf3', fontSize: isMobile ? 10 : 11, width: isMobile ? 100 : null, overflow: isMobile ? 'truncate' : 'none', ellipsis: '...' } }
+      yAxis: { axisLabel: { color: tc.textPrimary, fontSize: isMobile ? 10 : 11, width: isMobile ? 100 : null, overflow: isMobile ? 'truncate' : 'none', ellipsis: '...' } }
     });
   }
   // tierChart: donut label overlap at narrow viewport
@@ -730,7 +742,7 @@ function applyMobileChartOverrides(isMobile) {
     tierChart.setOption({
       series: [{
         type: 'pie', radius: ['40%', '70%'],
-        label: { color: '#e6edf3', fontSize: isMobile ? 10 : 12, position: isMobile ? 'outside' : 'inside' },
+        label: { color: tc.textPrimary, fontSize: isMobile ? 10 : 12, position: isMobile ? 'outside' : 'inside' },
         labelLine: { show: isMobile, length: 5, length2: 5 }
       }]
     });
@@ -738,9 +750,18 @@ function applyMobileChartOverrides(isMobile) {
 }
 applyMobileChartOverrides(gwMobileMQ.matches);
 if (gwMobileMQ.addEventListener) {
-  gwMobileMQ.addEventListener('change', e => applyMobileChartOverrides(e.matches));
+  gwMobileMQ.addEventListener('change', function(e) {
+    applyMobileChartOverrides(e.matches);
+    // Invalidate active tab's theme version so next tab-switch re-renders
+    var activeTab = document.querySelector('.tab-pane.active');
+    if (activeTab) delete tabThemeVersion[activeTab.id];
+  });
 } else if (gwMobileMQ.addListener) {
-  gwMobileMQ.addListener(e => applyMobileChartOverrides(e.matches));
+  gwMobileMQ.addListener(function(e) {
+    applyMobileChartOverrides(e.matches);
+    var activeTab = document.querySelector('.tab-pane.active');
+    if (activeTab) delete tabThemeVersion[activeTab.id];
+  });
 }
 
 // Resize handler

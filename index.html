@@ -22,6 +22,9 @@
   --accent2: #3fb950;
   --accent3: #f0883e;
   --danger: #f85149;
+  --region-cee: #d2a8ff;
+  --region-sea: #f0883e;
+  --region-mena: #58a6ff;
 }
 [data-theme="light"] {
   --bg-primary: #ffffff;
@@ -35,6 +38,9 @@
   --accent2: #1a7f37;
   --accent3: #bc4c00;
   --danger: #cf222e;
+  --region-cee: #6e40aa;
+  --region-sea: #953800;
+  --region-mena: #0550ae;
 }
 * { box-sizing: border-box; }
 body {
@@ -417,7 +423,7 @@ details > .detail-body { padding: 0.8rem 1rem; }
 
 <nav class="navbar" style="display:flex;justify-content:space-between;align-items:center;">
   <span class="navbar-brand">Ecological Sustainability &amp; Data Centers — Tapestry Analysis</span>
-  <button class="theme-toggle" id="themeToggle" aria-label="Toggle light/dark theme" title="Toggle theme">Dark</button>
+  <button class="theme-toggle" id="themeToggle" aria-label="Switch to light theme" aria-pressed="false" title="Toggle theme">Light</button>
 </nav>
 
 <div class="container-fluid px-3">
@@ -447,8 +453,8 @@ details > .detail-body { padding: 0.8rem 1rem; }
       <div class="row g-3 mt-1">
         <div class="col-6 col-md-3"><div class="stat-card"><div class="stat-value" id="ov-total"></div><div class="stat-label">Statements Scored</div></div></div>
         <div class="col-6 col-md-3"><div class="stat-card"><div class="stat-value" id="ov-nonzero"></div><div class="stat-label">With Relevance</div></div></div>
-        <div class="col-6 col-md-3"><div class="stat-card"><div class="stat-value" style="color:#3fb950" id="ov-tiera"></div><div class="stat-label">Tier A (score &ge; 50)</div></div></div>
-        <div class="col-6 col-md-3"><div class="stat-card"><div class="stat-value" style="color:#f0883e" id="ov-mean"></div><div class="stat-label">Mean Score</div></div></div>
+        <div class="col-6 col-md-3"><div class="stat-card"><div class="stat-value" style="color:var(--accent2)" id="ov-tiera"></div><div class="stat-label">Tier A (score &ge; 50)</div></div></div>
+        <div class="col-6 col-md-3"><div class="stat-card"><div class="stat-value" style="color:var(--accent3)" id="ov-mean"></div><div class="stat-label">Mean Score</div></div></div>
       </div>
 
       <div class="annotation mt-3">
